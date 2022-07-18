@@ -16,12 +16,20 @@
 #include <mutex>
 #include <memory>
 #include <thread>
+#include <type_traits>
 
-template <class T>
+template <class T, bool is_static, size_t size>
 class CircularBuffer
 {
 public:
-    explicit CircularBuffer(size_t size) : buf_(std::unique_ptr<T[]>(new T[size])), max_size_(size) {}
+    CircularBuffer()
+	{
+		if(!is_static)
+		{
+			buf_ = std::unique_ptr<T[]>(new T[size]);
+		}
+		max_size_ = size;
+	}
     
     void insert(T item);
     T get();
@@ -29,23 +37,26 @@ public:
     bool empty() const;
     bool full() const;
     size_t capacity() const;
-    size_t size() const;
+    size_t get_size() const;
 
 private:
-	std::unique_ptr<T[]> buf_;
+	using buffer_type = std::conditional_t<is_static, T[size], std::unique_ptr<T[]>>;
+	buffer_type buf_;
+
 	size_t head_ = 0;
 	size_t tail_ = 0;
-	const size_t max_size_;
+	size_t max_size_;
 	bool full_ = 0;
 };
+
 
 /**
  * @brief Resets the circular buffer
  * 
  * @tparam T type of the buffer
  */
-template <class T>
-void CircularBuffer<T>::reset()
+template <class T, bool is_static, size_t size>
+void CircularBuffer<T, is_static, size>::reset()
 {
     head_ = tail_;
     full_ = false;
@@ -58,8 +69,8 @@ void CircularBuffer<T>::reset()
  * @return true the buffer is empty
  * @return false the buffer is not empty
  */
-template<class T>
-bool CircularBuffer<T>::empty() const
+template <class T, bool is_static, size_t size>
+bool CircularBuffer<T, is_static, size>::empty() const
 {
 	//if head and tail are equal, we are empty
 	return (!full_ && (head_ == tail_));
@@ -72,8 +83,8 @@ bool CircularBuffer<T>::empty() const
  * @return true buffer is full
  * @return false buffer is not full
  */
-template<class T>
-bool CircularBuffer<T>::full() const
+template <class T, bool is_static, size_t size>
+bool CircularBuffer<T, is_static, size>::full() const
 {
 	//If tail is ahead the head by 1, we are full
 	return full_;
@@ -85,8 +96,8 @@ bool CircularBuffer<T>::full() const
  * @tparam T data type
  * @return size_t capacity
  */
-template<class T>
-size_t CircularBuffer<T>::capacity() const
+template <class T, bool is_static, size_t size>
+size_t CircularBuffer<T, is_static, size>::capacity() const
 {
 	return max_size_;
 }
@@ -98,10 +109,10 @@ size_t CircularBuffer<T>::capacity() const
  * @tparam T data type
  * @return size_t size of the current buffer
  */
-template<class T>
-size_t CircularBuffer<T>::size() const
+template <class T, bool is_static, size_t size>
+size_t CircularBuffer<T, is_static, size>::get_size() const
 {
-	size_t size = max_size_;
+	size_t size_ = max_size_;
 
 	if(!full_)
 	{
@@ -124,8 +135,8 @@ size_t CircularBuffer<T>::size() const
  * @tparam T data type
  * @param item the data to be inserted
  */
-template <class T>
-void CircularBuffer<T>::insert(T item)
+template <class T, bool is_static, size_t size>
+void CircularBuffer<T, is_static, size>::insert(T item)
 {
 	buf_[head_] = item;
 
@@ -145,8 +156,8 @@ void CircularBuffer<T>::insert(T item)
  * @tparam T class data type 
  * @return T data type within the buffer
  */
-template <class T>
-T CircularBuffer<T>::get()
+template <class T, bool is_static, size_t size>
+T CircularBuffer<T, is_static, size>::get()
 {
 	if(empty())
 	{

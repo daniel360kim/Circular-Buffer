@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "Makefile": "cpp",
+    "xtr1common": "cpp"
+  }
+}
